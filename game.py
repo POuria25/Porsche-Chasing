@@ -106,9 +106,6 @@ def update_oppositCar(
         # Determine direction based on lane position
         is_left_lane = car.centerx < width / 2
 
-        # Flag to track if we need to replace this car
-        replace_car = False
-
         # Left lane cars move down at constant speed
         if is_left_lane:
             # car.y += right_lane_car_speed
@@ -128,7 +125,6 @@ def update_oppositCar(
 
             # When car goes off screen, replace it
             if car.y > height:
-                replace_car = True
                 new_car_image = pygame.transform.rotate(
                     random.choice(oppositCar_images), 180
                 )
@@ -239,7 +235,7 @@ def load_board_image():
     except FileNotFoundError:
         print("Missing 'info_board.png'")
         exit()
-
+    
 
 def draw_board(board_image, font, player_speed=0):
     global current_city
@@ -256,7 +252,6 @@ def draw_board(board_image, font, player_speed=0):
 
     screen.blit(city_text, (text_x, text_y))
 
-
 def move_trees(speed):
     for tree in treesPositions:
         tree[1] += speed
@@ -271,6 +266,27 @@ def move_trees(speed):
             tree[1] = -30
 
 
+
+
+def draw_timer():
+    """Draws a timer at the top middle of the screen."""
+    # Calculate elapsed time in seconds
+    current_time = pygame.time.get_ticks()
+    elapsed_time_ms = current_time - start_time  # Use stored start_time
+    elapsed_time_seconds = elapsed_time_ms // 1000  # Convert milliseconds to seconds
+
+    # Format the timer text
+    timer_text = f"Time: {elapsed_time_seconds} s"
+
+    # Render the timer text
+    font = pygame.font.SysFont('impact, fantasy', 60, True, True)
+    text_surface = font.render(timer_text, True, (255,165,0))
+
+    # Draw the timer on the screen
+    screen.blit(text_surface, ((width // 2 - text_surface.get_width() // 2), 20))
+    
+    
+    
 def draw_road():
     screen.fill(grassColor)
     pygame.draw.rect(
@@ -370,6 +386,55 @@ def initialize_enemy_cars(num_cars=5):
         enemy_cars.append((car_image, enemy_car_rect))
 
 
+
+def load_collision_image():
+    try:
+        collision1 = pygame.image.load("collision1.png")
+        collision2 = pygame.image.load("collision2.png")
+        collision3 = pygame.image.load("collision3.png")
+        return collision1, collision2, collision3
+    except FileNotFoundError:
+        print("Missing collision image files")
+        exit()
+        
+        
+def display_collision(car_loc):
+    # Load the collision images
+    collision1, collision2, collision3 = load_collision_image()
+    
+    # Create a list of collision images
+    collision_images = [collision1, collision2, collision3]
+    
+    # Redraw the background for each image to ensure clean display
+    for image in collision_images:
+        # Redraw the scene to clear previous collision image
+        draw_road()
+        draw_trees(load_tree_image())
+        draw_oppositCar(enemy_cars, screen)
+        
+        # Draw the collision image at the car's location
+        screen.blit(image, car_loc)
+        
+        # Update the display to show the collision
+        pygame.display.update()
+        
+        # Wait for 5 seconds for each image
+        pygame.time.delay(200)
+
+def print_GameOver():
+    font = pygame.font.SysFont('impact, fantasy', 180, True, True)
+    text = font.render("Game Over", True, (255, 0, 0))
+    text_rect = text.get_rect(center=(width // 2, height // 2))
+    screen.blit(text, text_rect)
+    pygame.display.flip()
+    pygame.time.delay(4000)
+    
+    if(keys[K_ESCAPE]):
+        pygame.quit()
+        exit()
+
+
+
 initialize_enemy_cars()
 
 # Main loop
@@ -381,7 +446,7 @@ board_image = load_board_image()
 is_moving_backward = False
 
 while running:
-    clock.tick(60)
+    clock.tick(20)
     is_accelerating = False
     is_moving_backward = False
 
@@ -474,6 +539,10 @@ while running:
     if elapsed_time >= scroll_speed_increase_time:
         scroll_speed_multiplier = 2
 
+    if(keys[K_ESCAPE]):
+        pygame.quit()
+        exit()
+
     # Pass the current player speed to update_oppositCar
     update_oppositCar(
         enemy_cars,
@@ -523,25 +592,17 @@ while running:
     draw_board(
         board_image, pygame.font.Font(None, 20)
     )  # Increased font size for better visibility
+    draw_timer()
     pygame.display.update()
 
+    # Check for collisions
     for _, enemy_car in enemy_cars:
         if car_loc.colliderect(enemy_car):
-            print("Collision! Game Over!")
+            # First show the collision image
+            display_collision(car_loc)
+            # Then show game over screen
+            print_GameOver()
             running = False
             break
 
 pygame.quit()
-
-
-# TODO: 
-# 1. Add a scoring system based on distance traveled or time survived.
-# 2. Implement a pause feature.
-# 3. Add sound effects for car engine, collisions, and background music.
-# 4. Create a main menu and game over screen.
-# 5. Limit Speed board
-# 6. Add a speedometer to show the current speed of the player's car.
-# 7. Speed camera 
-# 8. Fix bug for car spawning 2 car in the same lane
-# 9. Fix reverse bug
-# 10. Fix overlapping cars  
